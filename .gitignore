@@ -1,0 +1,8 @@
+cmake-build*
+.idea
+CMakeLists.txt.user
+build*
+doxydocs/*
+build/
+install/
+log/

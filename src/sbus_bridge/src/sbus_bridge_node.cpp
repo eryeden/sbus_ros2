@@ -26,22 +26,20 @@
 */
 
 #include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
-
 #include "sbus_bridge/sbus_serial_driver.h"
 #include "sbus_interface/msg/sbus.hpp"
+#include "rcutils/logging.h"
 #include <algorithm>
+#include <chrono>
 #include <boost/algorithm/clamp.hpp>
+
+using namespace std::chrono_literals;
+
 
 int main( int argc, char **argv )
 {
 	rclcpp::init(argc, argv);
 	auto nh = rclcpp::Node::make_shared("sbus_serial_node");
-
-
-	ros::init( argc, argv, "sbus_serial_node" );
-	ros::NodeHandle nh;
-	ros::NodeHandle param_nh( "~" );
 
 	// Read/set parameters
 	std::string port;
@@ -55,24 +53,25 @@ int main( int argc, char **argv )
 	double enableChannelProportionalMin;
 	double enableChannelProportionalMax;
 
-	port = nh->declare_parameter("port", "/dev/ttyTHS2");
-	refresh_rate_hr = nh->declare_parameter("refresh_rate_hz", 5);
-	rxMinValue = nh->declare_parameter("rxMinValue", 172);
-	rxMaxValue = nh->declare_parameter("rxMaxValue", 1811);
-	outMinValue = nh->declare_parameter("outMinValue", 0);
-	outMaxValue = nh->declare_parameter("outMaxValue", 255);
-	silentOnFailsafe = nh->declare_parameter("silentOnFailsafe", false);
+	port = nh->declare_parameter<std::string>("port", "/dev/ttyTHS2");
+	refresh_rate_hr = nh->declare_parameter<int>("refresh_rate_hz", 5);
+	rxMinValue = nh->declare_parameter<int>("rxMinValue", 172);
+	rxMaxValue = nh->declare_parameter<int>("rxMaxValue", 1811);
+	outMinValue = nh->declare_parameter<int>("outMinValue", 0);
+	outMaxValue = nh->declare_parameter<int>("outMaxValue", 255);
+	silentOnFailsafe = nh->declare_parameter<bool>("silentOnFailsafe", false);
 	// Parameters for "enable channel". If channel number is -1, no enable channel is used.
-	enableChannelNum = nh->declare_parameter("enableChannelNum", -1);
-	enableChannelProportionalMin = nh->declare_parameter("enableChannelProportionalMin", -1.0);
-	enableChannelProportionalMax = nh->declare_parameter("enableChannelProportionalMax", -1.0);
+	enableChannelNum = nh->declare_parameter<int>("enableChannelNum", -1);
+	enableChannelProportionalMin = nh->declare_parameter<double>("enableChannelProportionalMin", -1.0);
+	enableChannelProportionalMax = nh->declare_parameter<double>("enableChannelProportionalMax", -1.0);
 
 	// Used for mapping raw values
 	float rawSpan = static_cast<float>(rxMaxValue-rxMinValue);
 	float outSpan = static_cast<float>(outMaxValue-outMinValue);
 
-	ros::Publisher pub = nh.advertise<sbus_serial::Sbus>( "sbus", 100 );
-	ros::Rate loop_rate( refresh_rate_hr );
+//	ros::Publisher pub = nh.advertise<sbus_serial::Sbus>( "sbus", 100 );
+	auto pub = nh->create_publisher<sbus_interface::msg::Sbus>("sbus", 100);
+	auto loop_rate = rclcpp::Rate((1.0 / refresh_rate_hr) * 1e9);
 
 	// Initialize SBUS port (using pointer to have only the initialization in the try-catch block)
 	sbus_serial::SBusSerialPort *sbusPort;
@@ -81,13 +80,14 @@ int main( int argc, char **argv )
 	}
 	catch( ... ) {
 		// TODO: add error message in exception and report
-		ROS_ERROR( "Unable to initalize SBUS port" );
+		//ROS_ERROR( "Unable to initalize SBUS port" );
+		RCLCPP_ERROR(nh->get_logger(), "Unable to initalize SBUS port");
 		return 1;
 	}
 
 	// Create Sbus message instance and set invariant properties. Other properties will be set in the callback lambda
-	sbus_serial::Sbus sbus;
-	sbus.header.stamp = ros::Time( 0 );
+	sbus_interface::msg::Sbus sbus;
+	sbus.header.stamp = rclcpp::Time(0);//  ros::Time( 0 );
 
 	// Callback (auto-capture by reference)
 	auto callback = [&]( const sbus_serial::SBusMsg sbusMsg ) {
@@ -102,35 +102,36 @@ int main( int argc, char **argv )
 				return;
 		}
 
-		sbus.header.stamp = ros::Time::now();
+		sbus.header.stamp = nh->now();
 		sbus.frame_lost = sbusMsg.frame_lost;
 		sbus.failsafe = sbusMsg.failsafe;
 
 		// Assign raw channels
-		std::transform( sbusMsg.channels.begin(), sbusMsg.channels.end(), sbus.rawChannels.begin(), [&]( uint16_t rawChannel ) {
+		std::transform( sbusMsg.channels.begin(), sbusMsg.channels.end(), sbus.raw_channels.begin(), [&]( uint16_t rawChannel ) {
 			return boost::algorithm::clamp( rawChannel, rxMinValue, rxMaxValue );   // Clamp to min/max raw values
 		} );
 
 		// Map to min/max values
-		std::transform( sbusMsg.channels.begin(), sbusMsg.channels.end(), sbus.mappedChannels.begin(), [&]( uint16_t rawChannel ) {
+		std::transform( sbusMsg.channels.begin(), sbusMsg.channels.end(), sbus.mapped_channels.begin(), [&]( uint16_t rawChannel ) {
 			int16_t mappedValue = (rawChannel - rxMinValue) / rawSpan * outSpan + outMinValue;
 			return boost::algorithm::clamp( mappedValue, outMinValue, outMaxValue );        // Clamp to min/max output values
 		} );
 	};
 	sbusPort->setCallback( callback );
 
-	ROS_INFO( "SBUS node started..." );
+//	ROS_INFO( "SBUS node started..." );
+	RCLCPP_INFO(nh->get_logger(), "SBUS node started...");
 
-	ros::Time lastPublishedTimestamp( 0 );
-	while( ros::ok())
+	rclcpp::Time lastPublishedTimestamp( 0 );
+	while(rclcpp::ok())
 	{
 		// Only publish if we have a new sample
 		if( lastPublishedTimestamp != sbus.header.stamp ) {
-			pub.publish( sbus );
+			pub->publish( sbus );
 			lastPublishedTimestamp = sbus.header.stamp;
 		}
 
-		ros::spinOnce();
+		rclcpp::spin_some(nh);
 		loop_rate.sleep();
 	}
 

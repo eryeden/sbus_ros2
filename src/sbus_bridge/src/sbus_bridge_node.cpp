@@ -91,8 +91,10 @@ int main( int argc, char **argv )
 	// Callback (auto-capture by reference)
 	auto callback = [&]( const sbus_serial::SBusMsg sbusMsg ) {
 		// First check if we should be silent on failsafe and failsafe is set. If so, do nothing
-		if( silentOnFailsafe && sbusMsg.failsafe )
-			return;
+		if( silentOnFailsafe && sbusMsg.failsafe ){
+			RCLCPP_INFO(nh->get_logger(), "SBUS fail safe detected.");
+			//return;
+		}
 
 		// Next check if we have an "enable channel" specified. If so, return immediately if the value of the specified channel is outside of the specified min/max
 		if( enableChannelNum >= 1 && enableChannelNum <= 16 ) {
@@ -120,14 +122,16 @@ int main( int argc, char **argv )
 
 	RCLCPP_INFO(nh->get_logger(), "SBUS node started...");
 
-	rclcpp::Time lastPublishedTimestamp( 0 );
+	rclcpp::Time lastPublishedTimestamp = nh->now();
 	while(rclcpp::ok())
 	{
 		// Only publish if we have a new sample
 		if( lastPublishedTimestamp != sbus.header.stamp ) {
+			RCLCPP_INFO(nh->get_logger(), "PUB");
 			pub->publish( sbus );
 			lastPublishedTimestamp = sbus.header.stamp;
 		}
+		//RCLCPP_INFO(nh->get_logger(), "SPIN");
 
 		rclcpp::spin_some(nh);
 		loop_rate.sleep();

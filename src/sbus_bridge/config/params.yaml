@@ -1,6 +1,6 @@
 sbus_bridge_node:
   ros__parameters:
-    port: "/dev/ttyTHS2"
+    port: "/dev/ttyTHS1"
     refresh_rate_hz: 5
     rxMinValue: 172
     rxMaxValue: 1811

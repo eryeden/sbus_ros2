@@ -28,3 +28,6 @@ sudo chmod 666 /dev/ttyTHS1
 ./install/sbus_bridge/lib/sbus_bridge/sbus_calib /dev/ttyTHS1
 ```
 `/dev/ttyTHS1` should be set as the available UART port.
+
+## Schematics
+![sch](doc/sch.png)

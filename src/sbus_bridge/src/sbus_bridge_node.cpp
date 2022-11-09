@@ -93,7 +93,7 @@ int main( int argc, char **argv )
 		// First check if we should be silent on failsafe and failsafe is set. If so, do nothing
 		if( silentOnFailsafe && sbusMsg.failsafe ){
 			RCLCPP_INFO(nh->get_logger(), "SBUS fail safe detected.");
-			//return;
+			return;
 		}
 
 		// Next check if we have an "enable channel" specified. If so, return immediately if the value of the specified channel is outside of the specified min/max
@@ -127,7 +127,7 @@ int main( int argc, char **argv )
 	{
 		// Only publish if we have a new sample
 		if( lastPublishedTimestamp != sbus.header.stamp ) {
-			RCLCPP_INFO(nh->get_logger(), "PUB");
+//			RCLCPP_INFO(nh->get_logger(), "PUB");
 			pub->publish( sbus );
 			lastPublishedTimestamp = sbus.header.stamp;
 		}

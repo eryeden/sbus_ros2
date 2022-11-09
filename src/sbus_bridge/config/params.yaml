@@ -5,8 +5,8 @@ sbus_bridge_node:
     rxMinValue: 172
     rxMaxValue: 1811
     outMinValue: 0
-    outMaxValue: 255
+    outMaxValue: 100000
     silentOnFailsafe: false
     enableChannelNum: -1
-    enableChannelProportionalMin: -1.0
-    enableChannelProportionalMax: -1.0
+    enableChannelProportionalMin: 0.0
+    enableChannelProportionalMax: 1.0

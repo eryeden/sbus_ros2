@@ -16,15 +16,27 @@ find_package(sbus_interface REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
+include_directories(include)
+
 add_executable(sbus_bridge_node
         src/sbus_bridge_node.cpp
         src/sbus_serial_driver.cpp
         )
-include_directories(include)
 ament_target_dependencies(sbus_bridge_node rclcpp std_msgs sbus_interface)
+
+add_executable(sbus_calib
+        src/sbus_calib.cpp
+        src/sbus_serial_driver.cpp
+        )
+ament_target_dependencies(sbus_calib rclcpp std_msgs sbus_interface)
+
 
 install(TARGETS
         sbus_bridge_node
+        DESTINATION lib/${PROJECT_NAME})
+
+install(TARGETS
+        sbus_calib
         DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY

@@ -1,4 +1,5 @@
 # sbus_ros2
+I ported [sbus_serial](https://github.com/jenswilly/sbus_serial) to ROS2.
 
 ## Build
 ```bash

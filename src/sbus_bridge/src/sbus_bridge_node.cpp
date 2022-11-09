@@ -80,7 +80,6 @@ int main( int argc, char **argv )
 	}
 	catch( ... ) {
 		// TODO: add error message in exception and report
-		//ROS_ERROR( "Unable to initalize SBUS port" );
 		RCLCPP_ERROR(nh->get_logger(), "Unable to initalize SBUS port");
 		return 1;
 	}
@@ -119,7 +118,6 @@ int main( int argc, char **argv )
 	};
 	sbusPort->setCallback( callback );
 
-//	ROS_INFO( "SBUS node started..." );
 	RCLCPP_INFO(nh->get_logger(), "SBUS node started...");
 
 	rclcpp::Time lastPublishedTimestamp( 0 );
